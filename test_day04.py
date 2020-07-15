@@ -26,3 +26,13 @@ def test_meets_criteria():
 
 def test_part1():
     assert day04.part1('145852-616942') == 1767
+
+
+def test_has_standalone_double_digits():
+    assert day04.has_standalone_double_digits(112233) is True
+    assert day04.has_standalone_double_digits(123444) is False
+    assert day04.has_standalone_double_digits(111122) is True
+
+
+def test_part2():
+    assert day04.part2('145852-616942') == 1192
