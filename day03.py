@@ -7,7 +7,7 @@ Wirepath = List[Command]
 Wire = List[Gridpoint]
 
 
-def parse_line(line: str) -> Wirepath:
+def parse_line(line: str) -> Wire:
     """
     Parse a line from the inputfile into a list of (str, int) tuples.
     """
@@ -17,19 +17,19 @@ def parse_line(line: str) -> Wirepath:
         direction = command[0]
         distance = int(command[1:])
         wirepath.append((direction, distance))
-    return wirepath
+    return wirepoints(wirepath)
 
 
-def parse_input(inputfile: str) -> List[Wirepath]:
+def parse_input(inputfile: str) -> List[Wire]:
     """
     Read the inputfile, parsing each line into a list of (str, int) tuples.
     Return a list of the lists.
     """
-    wirepaths = []
+    wires = []
     for line in open(inputfile):
-        wirepath = parse_line(line)
-        wirepaths.append(wirepath)
-    return wirepaths
+        wire = parse_line(line)
+        wires.append(wire)
+    return wires
 
 
 def wirepoints(wirepath: Wirepath) -> Wire:
@@ -90,6 +90,37 @@ def part1(inputfile: str) -> int:
     What is the manhattan distance from the central port to the closest
     intersection?
     """
-    wires = [wirepoints(w) for w in parse_input('input_day03.txt')]
+    wires = parse_input(inputfile)
     distance, _ = closest_to_port(find_intersections(wires))
     return distance
+
+
+def steps_to(intersection: Gridpoint, wire: Wire) -> int:
+    """
+    Count the number of steps to an intersection point on a given wire.
+    """
+    return wire.index(intersection) + 1
+
+
+def shortest_path(wires: List[Wire]) -> Tuple[int, Gridpoint]:
+    """
+    Find the intersection with the shortest combined number of steps along
+    each wire.
+    """
+    intersections = find_intersections(wires)
+    return min((sum(steps_to(p, w) for w in wires), p)
+               for p in intersections)
+
+
+def part2(inputfile: str) -> int:
+    """
+    What is the fewest combined steps the wires must take to reach an
+    intersection?
+    """
+    distance, _ = shortest_path(parse_input(inputfile))
+    return distance
+
+
+if __name__ == '__main__':
+    print(part1('input_day03.txt'))
+    print(part2('input_day03.txt'))
