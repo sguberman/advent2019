@@ -19,4 +19,4 @@ def test_parse_parameters():
 
 def test_step():
     program = '1002,4,3,4,33'.split(',')
-    assert day05.step(program, 0) == '1002,4,3,4,99'.split(',')
+    assert day05.step(program, 0) == ('1002,4,3,4,99'.split(','), 4)
