@@ -4,7 +4,7 @@ from itertools import zip_longest
 from typing import Callable, Deque, Dict, List, Optional, Tuple
 
 
-Memory = List[int]
+Intcodes = List[int]
 
 
 class Computer:
@@ -21,14 +21,13 @@ class Computer:
         99: 0  # halt
     }
 
-    def __init__(self, memory: Memory) -> None:
+    def __init__(self, program: Intcodes) -> None:
         '''
         Initialize a new Computer.
         '''
-        self.memory: Memory = memory
-        self.pointer: int = 0
+        self.original_program: Intcodes = program
+        self.initialize_memory()
         self.set_inputs()
-        self.outputs: List[int] = []
         self.log_output: bool = False
 
         self.operations: Dict[int, Callable] = {  # opcode -> function
@@ -42,42 +41,68 @@ class Computer:
             8: self.ceq,
         }
 
+    def initialize_memory(self) -> None:
+        self.memory: Intcodes = [x for x in self.original_program]
+        self.pointer = 0
+        self.outputs: List[int] = []
+
     def set_inputs(self, inputs: Optional[List[int]] = None) -> None:
         if not inputs:
             inputs = []
         self.inputs: Deque[int] = deque(inputs)
 
     @classmethod
-    def from_file(cls, program_filename: str) -> Computer:
+    def parse_text(cls, text: str) -> Intcodes:
         '''
-        Create a new Computer instance from a given program_filename.
+        Parse text as a list of int opcodes.
         '''
-        memory: Memory = [int(x)
-                          for x in open(program_filename).read().split(',')]
-        return cls(memory)
+        return [int(x) for x in text.split(',')]
+
+    @classmethod
+    def parse_file(cls, filename: str) -> Intcodes:
+        '''
+        Parse a text file as a list of int opcodes.
+        '''
+        text: str = open(filename).read()
+        return cls.parse_text(text)
+
+    @classmethod
+    def from_text(cls, text: str) -> Computer:
+        '''
+        Initialize a new Computer instance with memorey from a text program.
+        '''
+        return cls(cls.parse_text(text))
+
+    @classmethod
+    def from_file(cls, filename: str) -> Computer:
+        '''
+        Initialize a new Computer instance with memory from a text program
+        given by filename.
+        '''
+        return cls(cls.parse_file(filename))
 
     def add(self, a: int, b: int, address: int) -> None:
-        """
+        '''
         Opcode: 1
         Add a and b, storing the result in the given address in memory.
-        """
+        '''
         self.memory[address] = a + b
         self.pointer += self.num_params[1] + 1
 
     def mul(self, a: int, b: int, address: int) -> None:
-        """
+        '''
         Opcode: 2
         Multiply a and b, storing the result in the given address in memory.
-        """
+        '''
         self.memory[address] = a * b
         self.pointer += self.num_params[2] + 1
 
     def inp(self, address: int) -> None:
-        """
+        '''
         Opcode: 3
         If program inputs are available, take one. Otherwise get input from
         the user. Store it at the given address in the memory.
-        """
+        '''
         if self.inputs:
             program_input = self.inputs.popleft()
             if self.log_output:
@@ -95,11 +120,11 @@ class Computer:
         self.pointer += self.num_params[3] + 1
 
     def out(self, value: int) -> int:
-        """
+        '''
         Opcode: 4
         Print the provided value, if log_outputs is enabled. Append the value
         to program outputs.
-        """
+        '''
         if self.log_output:
             print('PROGRAM OUTPUT: ', value)
         self.outputs.append(value)
@@ -107,31 +132,31 @@ class Computer:
         return value
 
     def jit(self, a: int, b: int) -> None:
-        """
+        '''
         Opcode: 5
         If a is non-zero, set the pointer to b.
-        """
+        '''
         if a != 0:
             self.pointer = b
         else:
             self.pointer += self.num_params[5] + 1
 
     def jif(self, a: int, b: int) -> None:
-        """
+        '''
         Opcode: 6
         If a is zero, set the pointer to b.
-        """
+        '''
         if a == 0:
             self.pointer = b
         else:
             self.pointer += self.num_params[6] + 1
 
     def clt(self, a: int, b: int, address: int) -> None:
-        """
+        '''
         Opcode: 7
         If a is less than b, store 1 at the address in memory.
         Otherwise store 0.
-        """
+        '''
         if a < b:
             self.memory[address] = 1
         else:
@@ -139,11 +164,11 @@ class Computer:
         self.pointer += self.num_params[7] + 1
 
     def ceq(self, a: int, b: int, address: int) -> None:
-        """
+        '''
         Opcode: 8
         If a is equal to b, store 1 at the address in memory.
         Otherwise store 0.
-        """
+        '''
         if a == b:
             self.memory[address] = 1
         else:
@@ -152,10 +177,10 @@ class Computer:
 
     @classmethod
     def parse_opvalue(cls, opvalue: int) -> Tuple[int, ...]:
-        """
+        '''
         Parse the first value of an instruction, returning a tuple of the
         opcode and parameter modes as ints.
-        """
+        '''
         opcode = int(str(opvalue)[-2:])
         modes: List[int] = [
             int(x)
@@ -168,10 +193,10 @@ class Computer:
         return opcode, *modes
 
     def parse_parameters(self, modes: List[int]) -> List[int]:
-        """
+        '''
         Parse the parameters for an instruction beginning at pointer
         using the provided parameter modes.
-        """
+        '''
         parameters = []
         for mode, value in zip(modes, self.memory[self.pointer + 1:]):
             if mode == 0:  # position mode
@@ -186,10 +211,10 @@ class Computer:
             with_inputs: Optional[List[int]] = None,
             stop_at_first_output: bool = False,
             log_output: bool = False) -> List[int]:
-        """
+        '''
         Run the program in memory, starting from address 0, until reaching
         a halt opcode. Return a list of any program outputs.
-        """
+        '''
         if with_inputs:
             self.set_inputs(with_inputs)
         self.log_output = log_output
@@ -206,6 +231,8 @@ class Computer:
 
 
 if __name__ == '__main__':
-    c = Computer.from_file('input_day05.txt')
-    output = c.run(with_inputs=[5], stop_at_first_output=True, log_output=True)
+    c = Computer.from_file('input_day07.txt')
+    output = c.run(with_inputs=[4, 0],
+                   stop_at_first_output=True,
+                   log_output=True)
     print(output)
